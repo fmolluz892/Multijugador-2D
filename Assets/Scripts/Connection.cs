@@ -71,7 +71,7 @@ public class Connection : MonoBehaviourPunCallbacks
 
         // Declaramos listas para jugadores y salas.
         propiedadesJugador = new ExitGames.Client.Photon.Hashtable();
-        propiedadesJugador.Add("avatar", -1);
+        avatarSeleccionado = -1;
         listaSalas = new Dictionary<string, RoomInfo>();
 
 
@@ -148,28 +148,24 @@ public class Connection : MonoBehaviourPunCallbacks
         // Si es un elemento borrado, lo buscamos en nuestra lista y lo borramos.
         // Si es un elemento nuevo, lo añadimos.
         // Si es un elemento modificado, machacamos su información.
-        Debug.Log("Evento acutalización lista: " + roomlist.ToString());
+        
         foreach (RoomInfo r in roomlist)
         {
             if(r.RemovedFromList || !r.IsOpen || r.IsVisible)
             {
-                Estado("Sala Borrada: " + r.Name);
+                
                 listaSalas.Remove(r.Name);
             }
 
             if (listaSalas.ContainsKey(r.Name))
             {
-                if (r.PlayerCount > 0)
-                {
-                    Estado("Sala Existente: " + r.Name);
+                if (r.PlayerCount > 0)                    
                     listaSalas[r.Name] = r;
-                }
-               // else  // Lo podemos comentar si no queremos borrar salas vacías.
-               //     listaSalas.Remove(r.Name);
+                else  // Lo podemos comentar si no queremos borrar salas vacías.
+                    listaSalas.Remove(r.Name);
             }
             else
             {
-                Estado("Sala añadida: " + r.Name);
                 listaSalas.Add(r.Name, r);
             }
 
@@ -245,16 +241,7 @@ public class Connection : MonoBehaviourPunCallbacks
             nuevoElemento.transform.Find("txtNickName").GetComponent<TextMeshProUGUI>().text = jugador.NickName;
             // Obtenemos el avatar
             string avatar;
-            object avatarJugador;
-            if(jugador.ActorNumber == PhotonNetwork.LocalPlayer.ActorNumber)
-            {
-                avatarJugador = propiedadesJugador["avatar"];
-            }
-            else
-            {
-                avatarJugador = jugador.CustomProperties["avatar"];
-            }          
-            
+            object avatarJugador = jugador.CustomProperties["avatar"];
 
             if ((int)avatarJugador < 0)
             {
@@ -270,13 +257,14 @@ public class Connection : MonoBehaviourPunCallbacks
             
         }
 
-        if(avatarSeleccionado > -1 && PhotonNetwork.CurrentRoom.PlayerCount == PhotonNetwork.CurrentRoom.MaxPlayers)
+        if(avatarSeleccionado > -1 && PhotonNetwork.CurrentRoom.PlayerCount == PhotonNetwork.CurrentRoom.MaxPlayers && PhotonNetwork.IsMasterClient)
         {
             btnIniciarPartida.interactable = true; 
         }
         else
         {
             btnIniciarPartida.interactable = false;
+            Estado("Esparando que el master client inice la partida");
         }
 
 
@@ -308,8 +296,9 @@ public class Connection : MonoBehaviourPunCallbacks
     #endregion
 
     #region Métodos de Botones
-    
-    public void AlPulsarBtnCearPartidaNueva()
+
+    #region Botones Panel Principal
+    public void AlPulsarBtnCearPartidaNuevaPP()
     {
         CambiarPanel(panelCrearSala);
         txtBienvenida.text = "Bienvenido " + inputNickName.text;
@@ -317,7 +306,17 @@ public class Connection : MonoBehaviourPunCallbacks
 
         Estado("Creando nueva partida...");
     }
-    
+
+
+    public void AlPulsarBtnUnirseAUnaSalaPP()
+    {
+        CambiarPanel(panelUnirSala);
+        PhotonNetwork.NickName = inputNickName.text;
+    }
+
+    #endregion
+
+    #region Botones Panel Partida Nueva
     public void AlPulsarBtnCrearSala()
     {
         byte maxJugadores;
@@ -333,8 +332,6 @@ public class Connection : MonoBehaviourPunCallbacks
                 opcionesDeSala.IsVisible = !chkPrivada.isOn; // Es visible si no es privada
 
                 PhotonNetwork.CreateRoom(inputNombreSala.text, opcionesDeSala, TypedLobby.Default);
-                
-                
             }
             else
             {
@@ -345,13 +342,12 @@ public class Connection : MonoBehaviourPunCallbacks
         {
             Estado("Número de Jugadores incorrecto");
         }
-            
-
-        
-
     }
 
+    #endregion
 
+
+    #region Botones Panel de Sala
     public void AlPulsarIniciarPartida()
     {
         PhotonNetwork.LoadLevel(1);
@@ -380,7 +376,7 @@ public class Connection : MonoBehaviourPunCallbacks
 
     }
 
-  
+    #endregion
 
 
     public void AlPulsarBtnAvatar(string nombre)
